@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Trading.Context;
+using Trading.Dto;
 using Trading.Models;
 
 namespace Trading.Controllers
@@ -65,15 +66,11 @@ namespace Trading.Controllers
 
         // GET: api/booking/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<Booking>> GetBookingById(Guid id)
+        public async Task<ActionResult<BookingDetailsDto>> GetBookingById(Guid id)
         {
             var booking = await _context.Bookings
                 .Include(b => b.Item)
                     .ThenInclude(i => i.User)
-                .Include(b => b.Item)
-                    .ThenInclude(i => i.Category)
-                .Include(b => b.Item)
-                    .ThenInclude(i => i.Media)
                 .Include(b => b.BookerUser)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
@@ -91,7 +88,33 @@ namespace Trading.Controllers
                 return Forbid("You do not have permission to view this booking.");
             }
 
-            return Ok(booking);
+            var bookingDto = new BookingDetailsDto
+            {
+                Id = booking.Id,
+                ItemId = booking.ItemId,
+                ItemName = booking.Item.Name,
+                BookedAt = booking.BookedAt,
+                IsActive = booking.IsActive,
+                Booker = new ProfileDto
+                {
+                    Id = booking.BookerUser.Id,
+                    Username = booking.BookerUser.Username,
+                    Email = booking.BookerUser.Email,
+                    Name = booking.BookerUser.Name,
+                    Address = booking.BookerUser.Address,
+                    PhoneNumber = booking.BookerUser.PhoneNumber,
+                    RegisteredAt = booking.BookerUser.RegisteredAt
+                },
+                ItemOwner = new UserContactDto
+                {
+                    Id = booking.Item.User.Id,
+                    Name = booking.Item.User.Name,
+                    PhoneNumber = booking.Item.User.PhoneNumber,
+                    Email = booking.Item.User.Email
+                }
+            };
+
+            return Ok(bookingDto);
         }
 
         // GET: api/booking/my-bookings
@@ -101,38 +124,99 @@ namespace Trading.Controllers
             var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
             var bookings = await _context.Bookings
                 .Include(b => b.Item.User)
-                .Include(b => b.Item.Category)
-                .Include(b => b.Item.Media)
-                .Where(b => b.BookerUserId == userId && b.IsActive)
+                .Include(b => b.BookerUser)
+                .Where(b => b.BookerUserId == userId) // Show all bookings, active or not
                 .OrderByDescending(b => b.BookedAt)
+                .Select(booking => new BookingDetailsDto
+                {
+                    Id = booking.Id,
+                    ItemId = booking.ItemId,
+                    ItemName = booking.Item.Name,
+                    BookedAt = booking.BookedAt,
+                    IsActive = booking.IsActive,
+                    ItemOwner = new UserContactDto
+                    {
+                        Id = booking.Item.User.Id,
+                        Name = booking.Item.User.Name,
+                        PhoneNumber = booking.Item.User.PhoneNumber,
+                        Email = booking.Item.User.Email
+                    }
+                })
                 .ToListAsync();
 
             return Ok(bookings);
         }
-        
-        // GET: api/booking/item/{itemId}
-        [HttpGet("item/{itemId}")]
-        public async Task<IActionResult> GetActiveBookingForItem(Guid itemId)
+
+        // GET: api/booking/my-items-bookings
+        [HttpGet("my-items-bookings")]
+        public async Task<IActionResult> GetBookingsOnUserItems()
         {
-            var booking = await _context.Bookings
+            var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+            var bookings = await _context.Bookings
+                .Include(b => b.Item)
                 .Include(b => b.BookerUser)
-                .FirstOrDefaultAsync(b => b.ItemId == itemId && b.IsActive);
+                .Where(b => b.Item.UserId == userId) // Bookings on items owned by the current user
+                .OrderByDescending(b => b.BookedAt)
+                .Select(booking => new BookingDetailsDto
+                {
+                    Id = booking.Id,
+                    ItemId = booking.ItemId,
+                    ItemName = booking.Item.Name,
+                    BookedAt = booking.BookedAt,
+                    IsActive = booking.IsActive,
+                    Booker = new ProfileDto
+                    {
+                        Id = booking.BookerUser.Id,
+                        Username = booking.BookerUser.Username,
+                        Email = booking.BookerUser.Email,
+                        Name = booking.BookerUser.Name,
+                        Address = booking.BookerUser.Address,
+                        PhoneNumber = booking.BookerUser.PhoneNumber,
+                        RegisteredAt = booking.BookerUser.RegisteredAt
+                    }
+                })
+                .ToListAsync();
 
-            if (booking == null)
-            {
-                return NotFound("No active booking found for this item.");
-            }
-            
-            var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var itemOwnerId = await _context.Items.Where(i => i.Id == itemId).Select(i => i.UserId).FirstOrDefaultAsync();
-            var isAdmin = User.IsInRole("Admin");
+            return Ok(bookings);
+        }
 
-            if (booking.BookerUserId.ToString() != currentUserId && itemOwnerId.ToString() != currentUserId && !isAdmin)
-            {
-                return Forbid("You do not have permission to view this booking.");
-            }
+        // GET: api/booking/all
+        [HttpGet("all")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllBookings()
+        {
+            var bookings = await _context.Bookings
+                .Include(b => b.Item.User) // Item Owner
+                .Include(b => b.BookerUser) // Booker
+                .OrderByDescending(b => b.BookedAt)
+                .Select(booking => new BookingDetailsDto
+                {
+                    Id = booking.Id,
+                    ItemId = booking.ItemId,
+                    ItemName = booking.Item.Name,
+                    BookedAt = booking.BookedAt,
+                    IsActive = booking.IsActive,
+                    Booker = new ProfileDto 
+                    {
+                        Id = booking.BookerUser.Id,
+                        Username = booking.BookerUser.Username,
+                        Name = booking.BookerUser.Name,
+                        Email = booking.BookerUser.Email,
+                        PhoneNumber = booking.BookerUser.PhoneNumber,
+                        Address = booking.BookerUser.Address,
+                        RegisteredAt = booking.BookerUser.RegisteredAt
+                    },
+                    ItemOwner = new UserContactDto
+                    {
+                        Id = booking.Item.User.Id,
+                        Name = booking.Item.User.Name,
+                        PhoneNumber = booking.Item.User.PhoneNumber,
+                        Email = booking.Item.User.Email
+                    }
+                })
+                .ToListAsync();
 
-            return Ok(booking);
+            return Ok(bookings);
         }
 
         // PUT: api/booking/{id}/cancel
@@ -143,15 +227,14 @@ namespace Trading.Controllers
                 .Include(b => b.Item)
                 .FirstOrDefaultAsync(b => b.Id == id);
 
-            if (booking == null || !booking.IsActive)
-            {
-                return NotFound("Active booking not found.");
-            }
+            if (booking == null) return NotFound("Booking not found.");
+            if (!booking.IsActive) return BadRequest("Booking is already cancelled.");
 
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            
-            // Only the booker or the item owner can cancel
-            if (booking.BookerUserId.ToString() != currentUserId && booking.Item.UserId.ToString() != currentUserId)
+            var isAdmin = User.IsInRole("Admin");
+
+            // Allow the booker, the item owner, or an admin to cancel
+            if (booking.BookerUserId.ToString() != currentUserId && booking.Item.UserId.ToString() != currentUserId && !isAdmin)
             {
                 return Forbid("You do not have permission to cancel this booking.");
             }

@@ -1,0 +1,19 @@
+﻿# IDE and user-specific files
+.idea/
+*.user
+
+# Build artifacts
+**/bin
+**/obj
+
+# Git version control
+.git
+.gitignore
+
+# Frontend project
+frontend/
+
+# Docker files (don't need to be in the image)
+Dockerfile
+docker-compose.yml
+.dockerignore

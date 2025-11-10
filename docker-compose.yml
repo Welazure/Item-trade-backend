@@ -1,0 +1,26 @@
+﻿version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Map host port 8080 to container port 8080
+    environment:
+      # Override the connection string to ensure the database file is in the persistent volume
+      - ConnectionStrings__DefaultConnection=Data Source=/app/database.db;
+    volumes:
+      - db_data:/app/database.db # Mount a named volume for database persistence
+    
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5174:80" # Map host port 5174 to container port 80 (Nginx)
+    depends_on:
+      - backend # Ensure backend starts before frontend
+
+volumes:
+  db_data: # Define the named volume for database persistence
