@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Trading.Context;
 using Trading.Dto;
 using Trading.Models;
@@ -121,6 +122,15 @@ public class ItemController : ControllerBase
 
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
+        var user = await _context.Users.Where(x => x.Id == userId).FirstOrDefaultAsync();
+
+        if (user == null)
+            return BadRequest("User not found.");
+
+        user.Points -= 1;
+        
+        
+        
         var item = new Item
         {
             Id = Guid.NewGuid(),
@@ -184,6 +194,8 @@ public class ItemController : ControllerBase
         var item = await _context.Items.FindAsync(id);
         if (item == null) return NotFound();
 
+        
+        
         item.IsApproved = true;
         await _context.SaveChangesAsync();
         return Ok(item);
