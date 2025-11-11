@@ -102,7 +102,7 @@ public class Program
             options.AddPolicy("User", policy => policy.RequireRole("User", "Admin"));
         });
 
-        var app = builder.Build();        
+        var app = builder.Build();
 
         // Apply database migrations and initialize data on startup
         using (var scope = app.Services.CreateScope())
@@ -114,11 +114,10 @@ public class Program
         }
 
 // Configure the HTTP request pipeline.
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseSwagger();
-            app.UseSwaggerUI();
-        }
+
+        app.UseSwagger();
+        app.UseSwaggerUI();
+
 
         app.UseHttpsRedirection();
         app.UseStaticFiles();
