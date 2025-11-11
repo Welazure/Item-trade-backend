@@ -11,7 +11,7 @@ namespace Trading;
 
 public class Program
 {
-    public static async Task Main(string[] args)
+    public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         var configuration = builder.Configuration;
@@ -105,13 +105,7 @@ public class Program
         var app = builder.Build();
 
         // Apply database migrations and initialize data on startup
-        using (var scope = app.Services.CreateScope())
-        {
-            var services = scope.ServiceProvider;
-            var context = services.GetRequiredService<TradeContext>();
-            context.Database.Migrate(); // Applies pending migrations
-            await DbInitializer.InitializeAsync(services); // Initializes user points
-        }
+        
 
 // Configure the HTTP request pipeline.
 

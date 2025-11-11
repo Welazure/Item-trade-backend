@@ -25,8 +25,8 @@ public class User
     [Required]
     [MaxLength(20)]
     public string PhoneNumber { get; set; }
-    
-    public int Points { get; set; }
+
+    public int Points { get; set; } = 2;
     
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 
