@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿﻿using System.ComponentModel.DataAnnotations;
 
 namespace Trading.Models;
 
@@ -25,6 +25,8 @@ public class User
     [Required]
     [MaxLength(20)]
     public string PhoneNumber { get; set; }
+    
+    public int Points { get; set; }
     
     public DateTime RegisteredAt { get; set; } = DateTime.UtcNow;
 

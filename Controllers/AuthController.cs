@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿﻿﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
@@ -52,8 +52,21 @@ public class AuthController : ControllerBase
             return Unauthorized("Invalid credentials.");
         }
 
-        var token = GenerateJwtToken(user);
-        return Ok(new { token });
+        var response = new AuthResponseDto
+        {
+            Token = GenerateJwtToken(user),
+            User = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Name = user.Name,
+                Address = user.Address,
+                PhoneNumber = user.PhoneNumber,
+                Points = user.Points
+            }
+        };
+        return Ok(response);
     }
 
     [HttpPost("register")]
@@ -98,14 +111,28 @@ public class AuthController : ControllerBase
             Address = userRegister.Address,
             PhoneNumber = userRegister.PhoneNumber,
             Role = Role.User,
+            Points = 2, // Assign 2 points to new users
             RegisteredAt = DateTime.UtcNow
         };
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var token = GenerateJwtToken(user);
-        return Ok(new { token });
+        var response = new AuthResponseDto
+        {
+            Token = GenerateJwtToken(user),
+            User = new UserDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                Name = user.Name,
+                Address = user.Address,
+                PhoneNumber = user.PhoneNumber,
+                Points = user.Points
+            }
+        };
+        return Ok(response);
     }
 
     private string GenerateJwtToken(User user)
