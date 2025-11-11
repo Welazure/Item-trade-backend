@@ -5,10 +5,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Trading.Context;
+using Trading.Data;
+
+namespace Trading;
 
 public class Program
 {
-    public static void Main(string[] args)
+    public static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
         var configuration = builder.Configuration;
@@ -99,13 +102,15 @@ public class Program
             options.AddPolicy("User", policy => policy.RequireRole("User", "Admin"));
         });
 
-        var app = builder.Build();
+        var app = builder.Build();        
 
-// Initialize database
+        // Apply database migrations and initialize data on startup
         using (var scope = app.Services.CreateScope())
         {
-            var context = scope.ServiceProvider.GetRequiredService<TradeContext>();
-            context.Database.EnsureCreated();
+            var services = scope.ServiceProvider;
+            var context = services.GetRequiredService<TradeContext>();
+            context.Database.Migrate(); // Applies pending migrations
+            await DbInitializer.InitializeAsync(services); // Initializes user points
         }
 
 // Configure the HTTP request pipeline.
