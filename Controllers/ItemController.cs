@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Trading.Context;
 using Trading.Dto;
 using Trading.Models;
@@ -23,7 +22,7 @@ public class ItemController : ControllerBase
 
     // GET: api/item - Get approved items with optional filters
     [HttpGet]
-    [AllowAnonymous] // Or keep [Authorize] depending on whether guests can see items
+    [AllowAnonymous]
     public async Task<IActionResult> GetApprovedItems([FromQuery] Guid? categoryId, [FromQuery] string? searchTerm, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
         var query = _context.Items
@@ -65,22 +64,19 @@ public class ItemController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> GetItemById(Guid id)
     {
-        var query = _context.Items
+        var item = await _context.Items
             .Include(i => i.Category)
             .Include(i => i.User)
             .Include(i => i.Media)
             .Include(i => i.Bookings)
                 .ThenInclude(b => b.BookerUser)
-            .AsQueryable();
-
-        var item = await query.FirstOrDefaultAsync(i => i.Id == id);
+            .FirstOrDefaultAsync(i => i.Id == id);
 
         if (item == null)
         {
             return NotFound();
         }
 
-        // If item is not approved, only the owner or an admin can see it
         if (!item.IsApproved)
         {
             var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -98,7 +94,7 @@ public class ItemController : ControllerBase
         return Ok(item);
     }
 
-    // GET: api/item/my-items - Get items for the logged-in user
+    // GET: api/item/my-items
     [HttpGet("my-items")]
     public async Task<IActionResult> GetUserItems()
     {
@@ -121,16 +117,6 @@ public class ItemController : ControllerBase
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
-
-        var user = await _context.Users.Where(x => x.Id == userId).FirstOrDefaultAsync();
-
-        if (user == null)
-            return BadRequest("User not found.");
-
-        user.Points -= 1;
-        
-        
-        
         var item = new Item
         {
             Id = Guid.NewGuid(),
@@ -139,7 +125,7 @@ public class ItemController : ControllerBase
             Description = request.Description,
             Request = request.Request,
             CategoryId = request.CategoryId,
-            IsApproved = false, // Items require approval
+            IsApproved = false,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -148,6 +134,43 @@ public class ItemController : ControllerBase
 
         return CreatedAtAction(nameof(GetItemById), new { id = item.Id }, item);
     }
+
+    // PUT: api/item/{id}
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateItem(Guid id, [FromBody] UpdateItemRequest request)
+    {
+        if (!ModelState.IsValid) return BadRequest(ModelState);
+
+        var item = await _context.Items.FindAsync(id);
+        if (item == null)
+        {
+            return NotFound();
+        }
+
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var isAdmin = User.IsInRole("Admin");
+
+        if (item.UserId.ToString() != currentUserId && !isAdmin)
+        {
+            return Forbid("You can only update your own items.");
+        }
+
+        // Update properties
+        item.Name = request.Name;
+        item.Description = request.Description;
+        item.Request = request.Request;
+        item.CategoryId = request.CategoryId;
+
+        // If a non-admin user updates the item, it must be re-approved
+        if (!isAdmin)
+        {
+            item.IsApproved = false;
+        }
+
+        await _context.SaveChangesAsync();
+        return Ok(item);
+    }
+
 
     // DELETE: api/item/{id}
     [HttpDelete("{id}")]
@@ -171,7 +194,7 @@ public class ItemController : ControllerBase
 
     // --- Admin Routes ---
 
-    // GET: api/item/pending - Get items awaiting approval
+    // GET: api/item/pending
     [HttpGet("pending")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GetPendingItems()
@@ -194,8 +217,6 @@ public class ItemController : ControllerBase
         var item = await _context.Items.FindAsync(id);
         if (item == null) return NotFound();
 
-        
-        
         item.IsApproved = true;
         await _context.SaveChangesAsync();
         return Ok(item);

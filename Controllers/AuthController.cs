@@ -63,7 +63,8 @@ public class AuthController : ControllerBase
                 Name = user.Name,
                 Address = user.Address,
                 PhoneNumber = user.PhoneNumber,
-                Points = user.Points
+                Points = user.Points,
+                Role = user.Role.ToString()
             }
         };
         return Ok(response);
@@ -129,7 +130,8 @@ public class AuthController : ControllerBase
                 Name = user.Name,
                 Address = user.Address,
                 PhoneNumber = user.PhoneNumber,
-                Points = user.Points
+                Points = user.Points,
+                Role = user.Role.ToString()
             }
         };
         return Ok(response);
