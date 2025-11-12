@@ -46,7 +46,8 @@ namespace Trading.Controllers
                 PhoneNumber = user.PhoneNumber,
                 RegisteredAt = user.RegisteredAt,
                 ItemsCount = user.Items.Count,
-                ActiveBookingsCount = user.Bookings.Count(b => b.IsActive)
+                ActiveBookingsCount = user.Bookings.Count(b => b.IsActive),
+                Role = user.Role.ToString()
             };
 
             return Ok(profile);
