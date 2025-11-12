@@ -12,5 +12,6 @@
         public int ItemsCount { get; set; }
         public int ActiveBookingsCount { get; set; }
         public string Role { get; set; }
+        public int Points { get; set; }
     }
 }

@@ -47,7 +47,8 @@ namespace Trading.Controllers
                 RegisteredAt = user.RegisteredAt,
                 ItemsCount = user.Items.Count,
                 ActiveBookingsCount = user.Bookings.Count(b => b.IsActive),
-                Role = user.Role.ToString()
+                Role = user.Role.ToString(),
+                Points = user.Points
             };
 
             return Ok(profile);
