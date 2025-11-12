@@ -117,6 +117,8 @@ public class ItemController : ControllerBase
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
         var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
+        var user = await _context.Users.Where(x => x.Id == userId).FirstOrDefaultAsync();
+        if (user == null) return NotFound("User not found.");
         var item = new Item
         {
             Id = Guid.NewGuid(),
@@ -130,6 +132,7 @@ public class ItemController : ControllerBase
         };
 
         _context.Items.Add(item);
+        user.Points -= 1;
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetItemById), new { id = item.Id }, item);
